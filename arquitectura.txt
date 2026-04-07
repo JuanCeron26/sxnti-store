@@ -1,0 +1,55 @@
+backend/
+├── app/
+│   ├── main.py             # Punto de entrada (Instancia FastAPI)
+│   ├── core/               # Configuración global (JWT, variables de entorno, R2)
+│   ├── auth/               # Lógica de inicio de sesión del vendedor
+│   ├── api/                # Los "Controllers" (en FastAPI se llaman Routers)
+│   │   ├── v1/
+│   │   │   ├── products.py # Endpoints para ver/crear productos
+│   │   │   ├── orders.py   # Endpoints para subir comprobantes y pedidos
+│   ├── schemas/            # Pydantic (Validación de datos que entran/salen)
+│   ├── repositories/       # SQL puro (Queries directas a MySQL)
+│   ├── services/           # Lógica de negocio (Enviar WhatsApp, subir a R2)
+│   └── database.py         # Conexión asíncrona con aiomysql
+├── .env                    # Credenciales (DB, Cloudflare, WhatsApp API)
+└── requirements.txt
+
+utils -> logs
+
+
+SUBIDA DE COMPROBANTE:
+
+Cliente sube archivo
+       ↓
+  Valida el archivo (tipo, tamaño)
+       ↓
+  Sube a R2
+       ↓
+  Actualiza la orden en DB
+       ↓
+  Busca los datos completos (orden + producto)
+       ↓
+  Notifica al vendedor por Telegram
+       ↓
+  Responde al cliente
+
+
+ENDPOINTS PROTEGIDOS:
+
+POST /cuentas — crear cuenta
+DELETE /cuentas/{id} — eliminar cuenta
+POST /paquetes — crear paquete
+POST /paquetes/{id}/pines — agregar pines
+GET /ordenes — ver todas las órdenes
+
+
+
+FLUJO AUTENTICACION:
+
+POST /api/v1/auth/login
+  { "username": "admin", "password": "cambiame123" }
+        ↓
+  { "access_token": "eyJ...", "token_type": "bearer" }
+        ↓
+Todos los requests protegidos llevan el header:
+  Authorization: Bearer eyJ...

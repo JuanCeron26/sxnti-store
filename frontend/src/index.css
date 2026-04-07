@@ -1,0 +1,113 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
+
+@import "tailwindcss";
+
+:root {
+  --red: #FF0000;
+  --red-hot: #FF2020;
+  --red-dark: #8B0000;
+  --red-deep: #4A0000;
+  --red-glow: rgba(255, 0, 0, 0.4);
+  --red-subtle: rgba(255, 0, 0, 0.08);
+  --black: #000000;
+  --black-900: #0A0A0A;
+  --black-800: #111111;
+  --black-700: #1A1A1A;
+  --black-600: #222222;
+  --black-500: #2A2A2A;
+  --white: #FFFFFF;
+  --white-90: rgba(255,255,255,0.9);
+  --white-60: rgba(255,255,255,0.6);
+  --white-30: rgba(255,255,255,0.3);
+  --white-10: rgba(255,255,255,0.1);
+  --white-05: rgba(255,255,255,0.05);
+
+  --font-display: 'Bebas Neue', sans-serif;
+  --font-body: 'Rajdhani', sans-serif;
+  --font-mono: 'Share Tech Mono', monospace;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 20px;
+
+  --shadow-red: 0 0 20px rgba(255,0,0,0.3), 0 0 60px rgba(255,0,0,0.1);
+  --shadow-red-intense: 0 0 30px rgba(255,0,0,0.6), 0 0 80px rgba(255,0,0,0.2);
+  --shadow-card: 0 8px 32px rgba(0,0,0,0.6);
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--black-900);
+  color: var(--white);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--black-800); }
+::-webkit-scrollbar-thumb { background: var(--red-dark); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--red); }
+
+/* Selection */
+::selection { background: var(--red); color: var(--white); }
+
+/* Utilities */
+.font-display { font-family: var(--font-display); }
+.font-mono { font-family: var(--font-mono); }
+
+/* Noise texture overlay */
+.noise::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Glow animation */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: var(--shadow-red); }
+  50% { box-shadow: var(--shadow-red-intense); }
+}
+
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes flicker {
+  0%, 95%, 100% { opacity: 1; }
+  96% { opacity: 0.8; }
+  97% { opacity: 1; }
+  98% { opacity: 0.6; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes neon-border {
+  0%, 100% { border-color: var(--red); box-shadow: 0 0 5px var(--red-glow); }
+  50% { border-color: var(--red-hot); box-shadow: 0 0 20px var(--red-glow), 0 0 40px var(--red-glow); }
+}
+
+.animate-float { animation: float 3s ease-in-out infinite; }
+.animate-glow { animation: glow-pulse 2s ease-in-out infinite; }
+.animate-flicker { animation: flicker 4s ease-in-out infinite; }
+.animate-slide-up { animation: slide-up 0.5s ease forwards; }

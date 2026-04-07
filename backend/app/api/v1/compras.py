@@ -1,0 +1,32 @@
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.core.database import get_db
+from app.repositories import compras as repo
+from app.repositories import metodos_pago as repo_metodos
+from app.schemas.compras import OrdenCreate, OrdenResponse
+
+router = APIRouter(prefix="/ordenes", tags=["Órdenes"])
+
+@router.post("/", response_model=dict, status_code=201)
+async def crear_orden(data: OrdenCreate, db: AsyncSession = Depends(get_db)):
+    # Verificar que el método de pago existe
+    metodo = await repo_metodos.get_by_id(db, data.metodo_pago_id)
+    if not metodo:
+        raise HTTPException(status_code=404, detail="Método de pago no encontrado")
+
+    orden_id = await repo.create(db, data)
+    return {"id": orden_id, "mensaje": "Orden creada, sube tu comprobante"}
+
+@router.get("/{orden_id}", response_model=OrdenResponse)
+async def obtener_orden(orden_id: str, db: AsyncSession = Depends(get_db)):
+    orden = await repo.get_by_id(db, orden_id)
+    if not orden:
+        raise HTTPException(status_code=404, detail="Orden no encontrada")
+    return orden
+
+@router.get("/", response_model=list[dict])
+async def listar_ordenes_recientes(
+    limite: int = 20,
+    db: AsyncSession = Depends(get_db)
+):
+    return await repo.get_recientes(db, limite)
