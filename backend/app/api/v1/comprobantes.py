@@ -70,7 +70,7 @@ async def subir_comprobante_orden(
 
     # 5. Subir a R2
     try:
-        url_comprobante, es_imagen = await subir_comprobante(
+        key, es_imagen = await subir_comprobante(
             contenido=contenido,
             filename=archivo.filename,
             orden_id=orden_id,
@@ -82,7 +82,7 @@ async def subir_comprobante_orden(
         )
 
     # 6. Guardar URL en la orden
-    await repo_ordenes.update_comprobante(db, orden_id, url_comprobante)
+    await repo_ordenes.update_comprobante(db, orden_id, key)
 
     # 7. Obtener datos completos para la notificación
     orden_completa = await repo_ordenes.get_orden_con_producto(db, orden_id)
@@ -103,11 +103,14 @@ async def subir_comprobante_orden(
             "precio":              orden_completa["paquete_precio"],
         }
 
+    from app.services.cloudflare_r2 import generar_url_firmada
+    url_para_telegram = generar_url_firmada(key, expira_en=3600)
+
     # 9. Notificar al vendedor (si falla, no rompe la respuesta al cliente)
     notificacion_ok = await notificar_nueva_orden(
         orden=dict(orden_completa),
         producto=producto,
-        url_comprobante=url_comprobante,
+        url_comprobante=url_para_telegram,
         es_imagen=es_imagen,
     )
 

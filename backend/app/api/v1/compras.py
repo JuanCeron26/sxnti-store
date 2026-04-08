@@ -4,6 +4,7 @@ from app.core.database import get_db
 from app.repositories import compras as repo
 from app.repositories import metodos_pago as repo_metodos
 from app.schemas.compras import OrdenCreate, OrdenResponse
+from app.services.cloudflare_r2 import generar_url_firmada
 
 router = APIRouter(prefix="/ordenes", tags=["Órdenes"])
 
@@ -22,6 +23,20 @@ async def obtener_orden(orden_id: str, db: AsyncSession = Depends(get_db)):
     orden = await repo.get_by_id(db, orden_id)
     if not orden:
         raise HTTPException(status_code=404, detail="Orden no encontrada")
+    
+    orden = dict(orden)
+
+    # Si tiene comprobante, generar URL firmada fresca (1 hora)
+    if orden.get("url_comprobante"):
+        try:
+            orden["url_comprobante"] = generar_url_firmada(
+                orden["url_comprobante"],
+                expira_en=3600
+            )
+        except Exception:
+            # Si falla no rompemos la respuesta, solo no hay URL
+            orden["url_comprobante"] = None
+
     return orden
 
 @router.get("/", response_model=list[dict])

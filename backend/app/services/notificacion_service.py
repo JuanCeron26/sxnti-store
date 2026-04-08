@@ -61,7 +61,7 @@ def _construir_botones(orden: dict) -> dict:
     }
 
 
-async def notificar_nueva_orden2(
+async def notificar_nueva_orden(
     orden: dict,
     producto: dict,
     url_comprobante: str,
@@ -110,7 +110,7 @@ async def notificar_nueva_orden2(
             print(f"[Telegram] Error al notificar: {e}")
             return False
 
-async def notificar_nueva_orden(
+async def notificar_nueva_orden2(
     orden: dict,
     producto: dict,
     url_comprobante: str,
