@@ -84,9 +84,9 @@ export default function CartDrawer() {
                       </div>
                       <button
                         onClick={() => removeItem(item.id)}
-                        className="p-1.5 text-white/20 hover:text-red-400 hover:bg-red-900/20 rounded transition-all opacity-0 group-hover:opacity-100"
+                        className="p-1.5 cursor-pointer text-white/20 hover:text-red-400 hover:bg-red-900/20 rounded transition-all opacity-0 group-hover:opacity-100 flex items-center justify-center" style={{ width: '50px'}}
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-6 h-3.5" />
                       </button>
                     </motion.div>
                   ))}

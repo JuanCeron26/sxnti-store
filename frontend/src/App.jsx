@@ -19,6 +19,7 @@ import AdminLogin from './pages/admin/Login';
 import AdminLayout, { DashboardHome } from './pages/admin/Dashboard';
 import AdminProductos from './pages/admin/Productos';
 import AdminOrdenes from './pages/admin/Ordenes';
+import AdminMetodosPago from './pages/admin/MetodosPago';
 
 function PublicLayout({ children }) {
   return (
@@ -51,12 +52,7 @@ export default function App() {
               <Route path="dashboard" element={<DashboardHome />} />
               <Route path="productos" element={<AdminProductos />} />
               <Route path="ordenes" element={<AdminOrdenes />} />
-              <Route path="metodos-pago" element={
-                <div className="p-6">
-                  <h1 className="font-display text-3xl text-white">MÉTODOS DE PAGO</h1>
-                  <p className="text-white/40 font-body mt-2">Próximamente...</p>
-                </div>
-              } />
+              <Route path="metodos-pago" element={<AdminMetodosPago />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" />} />

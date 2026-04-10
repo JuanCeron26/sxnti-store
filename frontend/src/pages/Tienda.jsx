@@ -83,88 +83,97 @@ export default function Tienda() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
 
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-8" style={{ paddingTop: '80px', marginBottom: '20px'}}>
           <SectionTitle sub="Catálogo completo">
             TIENDA
           </SectionTitle>
         </div>
 
         {/* Filters bar */}
-        <div className="bg-[#0d0d0d] border border-white/10 rounded-xl p-4 mb-8">
-          <div className="flex flex-col md:flex-row gap-4">
+        <div className="bg-[#0d0d0d] border border-white/10 rounded-2xl p-5 mb-12 shadow-2xl">
+  <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-5">
 
-            {/* Search */}
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-              <input
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Buscar cuentas, diamantes..."
-                className="w-full bg-black/50 border border-white/15 rounded px-10 py-2.5 text-white placeholder:text-white/30 font-body text-sm focus:outline-none focus:border-red-500 transition-colors"
-              />
-              {search && (
-                <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white">
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
+    {/* Search - Rediseñado para que respire */}
+    <div className="relative flex-2 border-white" style={{marginLeft: '10px'}}>
+      {/*}
+      <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+        <Search className="w-5 h-5 text-red-500/50" />
+      </div> */}
+      <input
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        placeholder="Buscar cuentas, diamantes..."
+        className="w-full bg-black/40 border border-white/10 rounded-xl pl-12 pr-10 py-3.5 text-white placeholder:text-white/20 font-body text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500/50 transition-all"
+      />
+      {search && (
+        <button 
+          onClick={() => setSearch('')} 
+          className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-colors"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      )}
+    </div>
 
-            {/* Tipo tabs */}
-            <div className="flex items-center gap-1 bg-black/40 border border-white/10 rounded-lg p-1">
-              {FILTROS_TIPO.map(f => (
-                <button
-                  key={f.value}
-                  onClick={() => {
-                    setTipo(f.value);
-                    setSearchParams(f.value ? { tipo: f.value } : {});
-                  }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-body font-semibold uppercase tracking-wider transition-all duration-200
-                    ${tipo === f.value
-                      ? 'bg-red-600 text-white shadow-[0_0_12px_rgba(255,0,0,0.4)]'
-                      : 'text-white/50 hover:text-white hover:bg-white/5'
-                    }`}
-                >
-                  <span>{f.icon}</span>
-                  <span className="hidden sm:inline">{f.label}</span>
-                </button>
-              ))}
-            </div>
+    {/* Tipo tabs - Más modernas y espaciosas */}
+    <div className="flex flex-1 items-center gap-1.5 bg-black/60 border border-white/5 rounded-xl p-1.5">
+      {FILTROS_TIPO.map(f => (
+        <button
+          key={f.value}
+          onClick={() => {
+            setTipo(f.value);
+            setSearchParams(f.value ? { tipo: f.value } : {});
+          }}
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-display font-bold uppercase tracking-widest transition-all duration-300
+            ${tipo === f.value
+              ? 'bg-red-600 text-white shadow-[0_0_20px_rgba(220,38,38,0.3)]'
+              : 'text-white/40 hover:text-white hover:bg-white/5'
+            }`}
+        >
+          <span className="text-base">{f.icon}</span>
+          <span className="hidden xl:inline">{f.label}</span>
+        </button>
+      ))}
+    </div>
 
-            {/* Sort */}
-            <select
-              value={sort}
-              onChange={e => setSort(e.target.value)}
-              className="bg-black/50 border border-white/15 rounded px-3 py-2.5 text-white font-body text-sm focus:outline-none focus:border-red-500 min-w-[150px]"
-            >
-              {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </div>
+    {/* Sort - Estilizado como los demás */}
+    <div className="flex-1">
+      <select
+        value={sort}
+        onChange={e => setSort(e.target.value)}
+        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-white/70 font-display text-xs font-bold uppercase tracking-widest focus:outline-none focus:border-red-500/50 cursor-pointer appearance-none"
+        style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%23cc0000\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'org/19/9\' /%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', backgroundSize: '1em' }}
+      >
+        {SORT_OPTIONS.map(o => <option key={o.value} value={o.value} className="bg-[#0d0d0d]">{o.label}</option>)}
+      </select>
+    </div>
+  </div>
 
-          {/* Active filters */}
-          {hasFilters && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              className="flex items-center gap-2 mt-3 pt-3 border-t border-white/10 flex-wrap"
-            >
-              <span className="text-white/30 font-mono text-xs uppercase tracking-wider">Filtros activos:</span>
-              {tipo && (
-                <span className="flex items-center gap-1 px-2 py-1 bg-red-900/30 border border-red-800/50 rounded text-xs font-mono text-red-400">
-                  {FILTROS_TIPO.find(f => f.value === tipo)?.label}
-                  <button onClick={() => { setTipo(''); setSearchParams({}); }}><X className="w-3 h-3" /></button>
-                </span>
-              )}
-              {search && (
-                <span className="flex items-center gap-1 px-2 py-1 bg-white/10 border border-white/20 rounded text-xs font-mono text-white/60">
-                  "{search}"
-                  <button onClick={() => setSearch('')}><X className="w-3 h-3" /></button>
-                </span>
-              )}
-              <button onClick={clearFilters} className="ml-auto text-white/30 hover:text-red-400 font-mono text-xs uppercase tracking-wider transition-colors">
-                Limpiar todo
-              </button>
-            </motion.div>
-          )}
+  {/* Active filters - Separación corregida */}
+  {hasFilters && (
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex items-center gap-3 mt-5 pt-5 border-t border-white/5 flex-wrap"
+    >
+      <span className="text-white/20 font-mono text-[10px] uppercase tracking-[2px]">Filtros aplicados:</span>
+      {tipo && (
+        <div className="flex items-center gap-2 px-3 py-1 bg-red-600/10 border border-red-600/30 rounded-full text-[10px] font-bold text-red-500 uppercase tracking-tighter">
+          {FILTROS_TIPO.find(f => f.value === tipo)?.label}
+          <button onClick={() => { setTipo(''); setSearchParams({}); }}><X className="w-3 h-3" /></button>
+        </div>
+      )}
+      {search && (
+        <div className="flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[10px] font-bold text-white/50 uppercase tracking-tighter">
+          "{search}"
+          <button onClick={() => setSearch('')}><X className="w-3 h-3" /></button>
+        </div>
+      )}
+      <button onClick={clearFilters} className="ml-auto text-[10px] text-white/20 hover:text-red-500 uppercase font-bold tracking-widest transition-colors">
+        Resetear
+      </button>
+    </motion.div>
+  )}
         </div>
 
         {/* Results info */}

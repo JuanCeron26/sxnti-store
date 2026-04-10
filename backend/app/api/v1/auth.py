@@ -20,11 +20,18 @@ async def login(data: LoginRequest):
         )
 
     # Validar password
+    if data.password != settings.ADMIN_PASSWORD:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Credenciales incorrectas",
+        )
+    """
     if not verificar_password(data.password, _ADMIN_PASSWORD_HASH):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Credenciales incorrectas",
         )
+    """
 
     token = crear_token({"sub": data.username, "role": "admin"})
     return TokenResponse(

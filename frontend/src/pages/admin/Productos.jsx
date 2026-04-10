@@ -7,9 +7,9 @@ import { z } from 'zod';
 import { Plus, Edit2, Trash2, X, Upload, Package, CheckCircle } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
-import { mockProducts } from '../../services/api';
+import { api } from '../../services/api';
 import { formatCOP } from '../../utils/context';
-import { Button, Input, Textarea, Select, GlassCard, Badge } from '../../components/ui';
+import { Button, Input, Textarea, Select, GlassCard, Badge, Spinner } from '../../components/ui';
 
 const schema = z.object({
   nombre: z.string().min(3, 'Mínimo 3 caracteres'),
@@ -134,10 +134,31 @@ function ProductModal({ product, onClose, onSave }) {
 }
 
 export default function AdminProductos() {
-  const [products, setProducts] = useState(mockProducts);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null); // null | 'new' | product
 
+  // Cargar productos al montar
+  useEffect(() => {
+    loadProducts();
+  }, []);
+
+  const loadProducts = async () => {
+    try {
+      setLoading(true);
+      const data = await api.getProducts();
+      setProducts(data);
+    } catch (error) {
+      toast.error('Error al cargar productos');
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSave = (data) => {
+    // Por ahora solo actualiza localmente
+    // TODO: Implementar llamada al backend cuando esté listo
     setProducts(prev => {
       const exists = prev.find(p => p.id === data.id);
       return exists ? prev.map(p => p.id === data.id ? { ...p, ...data } : p) : [data, ...prev];
@@ -145,9 +166,22 @@ export default function AdminProductos() {
   };
 
   const handleDelete = (id) => {
+    // Por ahora solo elimina localmente
+    // TODO: Implementar llamada al backend cuando esté listo
     setProducts(prev => prev.filter(p => p.id !== id));
     toast.success('Producto eliminado');
   };
+
+  if (loading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-3">
+          <Spinner size="lg" />
+          <p className="text-white/30 font-mono text-sm">Cargando productos...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">

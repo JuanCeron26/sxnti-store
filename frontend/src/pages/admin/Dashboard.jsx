@@ -19,34 +19,36 @@ const NAV = [
   { to: '/admin/metodos-pago', icon: CreditCard, label: 'Métodos Pago' },
 ];
 
-function AdminSidebar({ mobile, onClose }) {
+// ─── ADMIN SIDEBAR (LÓGICA ACTUALIZADA) ──────────────────────────────────────
+function AdminSidebar({ mobile, onClose, collapsed, onToggle }) {
   const { logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const handleLogout = () => {
-    logout();
-    navigate('/admin');
-    toast.success('Sesión cerrada');
-  };
-
   return (
-    <div className={`${mobile ? 'w-full' : 'w-60'} bg-[#0a0a0a] border-r border-white/10 flex flex-col h-full`}>
-      {/* Logo */}
-      <div className="px-5 py-5 border-b border-white/10 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Zap className="w-5 h-5 text-red-500" fill="currentColor" />
-          <span className="font-display text-lg tracking-widest">SXNTI<span className="text-red-500">ADMIN</span></span>
-        </div>
-        {mobile && (
-          <button onClick={onClose} className="text-white/50 hover:text-white p-1">
-            <X className="w-4 h-4" />
+    <div className="flex flex-col h-full w-full">
+      {/* Logo & Toggle */}
+      <div className={`px-5 py-6 border-b border-white/10 flex items-center ${collapsed ? 'justify-center' : 'justify-between'}`}>
+        {!collapsed && (
+          <div className="flex items-center gap-2">
+            <Zap className="w-5 h-5 text-red-500" fill="currentColor" />
+            <span className="font-display text-lg tracking-widest">SXNTI<span className="text-red-500">ADMIN</span></span>
+          </div>
+        )}
+        {collapsed && <Zap className="w-6 h-6 text-red-500" fill="currentColor" />}
+        
+        {!mobile && (
+          <button 
+            onClick={onToggle}
+            className={`text-white/30 hover:text-white p-1 transition-all ${collapsed ? 'mt-2' : ''}`}
+          >
+            {collapsed ? <ChevronRight className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         )}
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
+      <nav className="flex-1 px-3 py-4 flex flex-col gap-2">
         {NAV.map(({ to, icon: Icon, label }) => {
           const active = location.pathname === to;
           return (
@@ -54,31 +56,28 @@ function AdminSidebar({ mobile, onClose }) {
               key={to}
               to={to}
               onClick={mobile ? onClose : undefined}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg font-body font-semibold text-sm uppercase tracking-wider transition-all duration-200
-                ${active
-                  ? 'bg-red-600/20 text-red-400 border border-red-600/30'
-                  : 'text-white/50 hover:text-white hover:bg-white/5 border border-transparent'
-                }`}
+              className={`flex items-center gap-3 px-3 py-3 rounded-lg font-body font-semibold text-xs uppercase tracking-wider transition-all
+                ${active 
+                  ? 'bg-red-600/20 text-red-400 border border-red-600/30' 
+                  : 'text-white/40 hover:text-white hover:bg-white/5 border border-transparent'
+                } ${collapsed ? 'justify-center' : ''}`}
+              title={collapsed ? label : ''}
             >
-              <Icon className={`w-4 h-4 ${active ? 'text-red-500' : ''}`} />
-              {label}
-              {active && <ChevronRight className="w-3 h-3 ml-auto text-red-500/50" />}
+              <Icon className={`w-5 h-5 flex-shrink-0 ${active ? 'text-red-500' : ''}`} />
+              {!collapsed && <span>{label}</span>}
             </Link>
           );
         })}
       </nav>
 
-      {/* Logout */}
-      <div className="px-3 py-4 border-t border-white/10">
-        <Link to="/" className="flex items-center gap-3 px-3 py-2 text-white/30 hover:text-white/60 text-xs font-mono uppercase tracking-wider transition-colors mb-1">
-          Ver tienda
-        </Link>
+      {/* Footer / Logout */}
+      <div className={`px-3 py-4 border-t border-white/10 ${collapsed ? 'items-center' : ''} flex flex-col gap-1`}>
         <button
-          onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 text-white/40 hover:text-red-400 hover:bg-red-900/20 rounded-lg font-body font-semibold text-sm uppercase tracking-wider transition-all"
+          onClick={() => { logout(); navigate('/admin'); }}
+          className="w-full flex items-center gap-3 px-3 py-3 text-white/40 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-all"
         >
-          <LogOut className="w-4 h-4" />
-          Cerrar sesión
+          <LogOut className="w-5 h-5 flex-shrink-0" />
+          {!collapsed && <span className="text-xs uppercase font-semibold">Salir</span>}
         </button>
       </div>
     </div>
@@ -101,74 +100,92 @@ export function DashboardHome() {
   ];
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <p className="text-white/40 font-mono text-xs uppercase tracking-wider mb-1">Panel de control</p>
-        <h1 className="font-display text-3xl text-white">DASHBOARD</h1>
+  /* 1. Añadimos overflow-hidden y w-full para que el grid no calcule el ancho fuera de la pantalla */
+  <div className="p-4 md:p-8 w-full overflow-hidden" style={{paddingLeft: '10px'}}>
+    <div className="mb-8" style={{marginTop: '20px'}}>
+      <p className="text-white/40 font-mono text-[10px] uppercase tracking-[0.3em] mb-1">SISTEMA DE GESTIÓN</p>
+      <h1 className="font-display text-4xl text-white tracking-tighter">DASHBOARD</h1>
+    </div>
+
+    {/* Stats - 2. Forzamos w-full para que el grid se ciña al contenedor padre */}
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10 w-full" style={{marginBottom: '20px'}}>
+      {stats.map((s, i) => (
+        <motion.div
+          key={s.label}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: i * 0.05 }}
+          /* 3. Aseguramos que el div de la animación no cause desbordamiento lateral */
+          className="min-w-0"
+        >
+          <GlassCard className="!p-6 flex flex-col justify-between min-h-[120px] w-full">
+            <div className="flex items-center justify-between opacity-40 mb-4">
+              <span className="font-mono text-[10px] uppercase tracking-widest">{s.label}</span>
+              <s.icon className={`w-4 h-4 ${s.color} flex-shrink-0`} />
+            </div>
+            <div className="flex items-baseline gap-2">
+              {/* 4. 'truncate' evita que números muy largos (ingresos) empujen el cuadro hacia afuera */}
+              <p className={`font-display text-2xl md:text-3xl tracking-tight ${s.color} truncate`}>
+                {s.value}
+              </p>
+            </div>
+          </GlassCard>
+        </motion.div>
+      ))}
+    </div>
+
+    {/* Recent orders */}
+    <div className="space-y-4 w-full">
+      <div className="flex items-center justify-between px-2">
+        <h2 className="font-display text-xl tracking-widest uppercase">Órdenes Recientes</h2>
+        <Link to="/admin/ordenes" className="group flex items-center gap-2 text-white/30 hover:text-red-400 transition-colors font-mono text-[10px] uppercase tracking-widest">
+          Ver todas <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+        </Link>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {stats.map((s, i) => (
-          <motion.div
-            key={s.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.08 }}
-          >
-            <GlassCard className="p-5">
-              <div className="flex items-start justify-between mb-3">
-                <p className="text-white/40 font-mono text-xs uppercase tracking-wider leading-tight">{s.label}</p>
-                <s.icon className={`w-4 h-4 ${s.color} flex-shrink-0`} />
-              </div>
-              <p className={`font-display text-2xl ${s.color}`}>{s.value}</p>
-            </GlassCard>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Recent orders */}
-      <GlassCard className="overflow-hidden">
-        <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
-          <h2 className="font-display text-lg tracking-widest">ÓRDENES RECIENTES</h2>
-          <Link to="/admin/ordenes" className="text-red-400 hover:text-red-300 font-mono text-xs uppercase tracking-wider transition-colors">
-            Ver todas
-          </Link>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
+      {/* 5. Aseguramos que la tabla ocupe el 100% y no 'estire' el layout */}
+      <GlassCard className="!p-0 overflow-hidden border-white/5 w-full">
+        <div className="overflow-x-auto custom-scrollbar w-full">
+          <table className="w-full border-collapse">
             <thead>
-              <tr className="border-b border-white/5">
-                {['Cliente', 'Producto', 'Precio', 'Estado', 'WhatsApp'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-white/30 font-mono text-xs uppercase tracking-wider">{h}</th>
+              <tr className="bg-white/[0.02] border-b border-white/5">
+                {['Cliente', 'Producto', 'Precio', 'Estado', 'Acción'].map(h => (
+                  <th key={h} className="px-6 py-4 text-left text-white/30 font-mono text-[10px] uppercase tracking-[0.2em]">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-white/5">
               {orders.map((order, i) => (
                 <motion.tr
                   key={order.id}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ delay: i * 0.05 }}
-                  className="border-b border-white/5 hover:bg-white/[0.02] transition-colors"
+                  transition={{ delay: i * 0.03 }}
+                  className="hover:bg-white/[0.03] transition-colors group"
                 >
-                  <td className="px-4 py-3 text-white font-body text-sm font-semibold">{order.nombre_cliente}</td>
-                  <td className="px-4 py-3 text-white/60 font-body text-sm truncate max-w-[160px]">{order.producto}</td>
-                  <td className="px-4 py-3 text-red-400 font-display text-sm">{formatCOP(order.precio)}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-6 py-4">
+                    <div className="font-body text-sm font-bold text-white/90">{order.nombre_cliente}</div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="font-body text-xs text-white/50 max-w-[200px] truncate">{order.producto}</div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="font-display text-sm text-red-500">{formatCOP(order.precio)}</span>
+                  </td>
+                  <td className="px-6 py-4">
                     <Badge variant={order.estado === 'aprobada' ? 'green' : order.estado === 'rechazada' ? 'red' : 'yellow'}>
                       {order.estado}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-6 py-4">
                     <a
                       href={`https://wa.me/${order.whatsapp_cliente}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-green-400 hover:text-green-300 font-mono text-xs transition-colors"
+                      className="inline-flex items-center gap-2 bg-green-500/10 hover:bg-green-500/20 text-green-500 px-3 py-1.5 rounded-full font-mono text-[10px] uppercase tracking-tighter transition-all"
                     >
-                      💬 Escribir
+                      <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                      WhatsApp
                     </a>
                   </td>
                 </motion.tr>
@@ -178,12 +195,14 @@ export function DashboardHome() {
         </div>
       </GlassCard>
     </div>
-  );
+  </div>
+);
 }
 
 // ─── ADMIN LAYOUT ─────────────────────────────────────────────────────────────
 export default function AdminLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false); // Nuevo estado para colapsar
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
 
@@ -194,29 +213,27 @@ export default function AdminLayout() {
   if (!isAdmin) return null;
 
   return (
-    <div className="min-h-screen bg-[#080808] flex">
-
+    <div className="min-h-screen bg-[#080808] flex overflow-hidden">
+      
       {/* Desktop sidebar */}
-      <div className="hidden md:flex flex-col fixed left-0 top-0 bottom-0 w-60 z-30">
-        <AdminSidebar />
-      </div>
+      <motion.div 
+        animate={{ width: isCollapsed ? 80 : 240 }}
+        className="hidden md:flex flex-col fixed left-0 top-0 bottom-0 bg-[#0a0a0a] border-r border-white/10 z-30 overflow-hidden"
+      >
+        <AdminSidebar collapsed={isCollapsed} onToggle={() => setIsCollapsed(!isCollapsed)} />
+      </motion.div>
 
-      {/* Mobile sidebar */}
+      {/* Mobile sidebar (sin cambios profundos) */}
       <AnimatePresence>
         {mobileOpen && (
           <>
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setMobileOpen(false)}
               className="fixed inset-0 bg-black/80 z-40 md:hidden"
             />
             <motion.div
-              initial={{ x: '-100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }}
               className="fixed left-0 top-0 bottom-0 w-64 z-50 md:hidden"
             >
               <AdminSidebar mobile onClose={() => setMobileOpen(false)} />
@@ -225,8 +242,11 @@ export default function AdminLayout() {
         )}
       </AnimatePresence>
 
-      {/* Main content */}
-      <div className="flex-1 md:ml-60 flex flex-col min-h-screen">
+      {/* Main content - Ajuste dinámico de margen */}
+      <motion.div 
+        animate={{ marginLeft: isCollapsed ? 80 : 240 }}
+        className="flex-1 flex flex-col min-h-screen w-full transition-all duration-300"
+      >
         {/* Mobile topbar */}
         <div className="md:hidden flex items-center justify-between px-4 py-3 bg-[#0a0a0a] border-b border-white/10">
           <button onClick={() => setMobileOpen(true)} className="text-white/60 hover:text-white p-1">
@@ -236,10 +256,12 @@ export default function AdminLayout() {
           <Shield className="w-4 h-4 text-red-500/50" />
         </div>
 
-        <main className="flex-1 overflow-auto">
-          <Outlet />
+        <main className="flex-1 w-full overflow-x-hidden bg-[#080808]">
+          <div className="w-full max-w-[1400px] mx-auto p-4 md:p-8">
+            <Outlet />
+          </div>
         </main>
-      </div>
+      </motion.div>
     </div>
   );
 }

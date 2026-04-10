@@ -1,5 +1,5 @@
 // pages/Checkout.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -9,8 +9,8 @@ import { Upload, CheckCircle, ArrowLeft, Zap, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
 import { useCart, formatCOP } from '../utils/context';
-import { mockMetodosPago, api } from '../services/api';
-import { Button, Input, GlassCard } from '../components/ui';
+import { api } from '../services/api';
+import { Button, Input, GlassCard, Spinner } from '../components/ui';
 
 const schema = z.object({
   nombre_cliente: z.string().min(2, 'Ingresa tu nombre'),
@@ -20,6 +20,17 @@ const schema = z.object({
 
 const STEPS = ['Datos', 'Pago', 'Comprobante', '¡Listo!'];
 
+// Helper para iconos de métodos de pago
+const getMetodoIcon = (nombre) => {
+  const lower = nombre.toLowerCase();
+  if (lower.includes('nequi')) return '📱';
+  if (lower.includes('banco')) return '🏦';
+  if (lower.includes('western')) return '💸';
+  if (lower.includes('zelle')) return '💳';
+  if (lower.includes('paypal')) return '💰';
+  return '💳';
+};
+
 export default function Checkout() {
   const { items, total, clearCart } = useCart();
   const navigate = useNavigate();
@@ -27,13 +38,29 @@ export default function Checkout() {
   const [orden, setOrden] = useState(null);
   const [comprobante, setComprobante] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [metodosPago, setMetodosPago] = useState([]);
+  const [loadingMetodos, setLoadingMetodos] = useState(true);
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
   });
 
   const metodoPagoId = watch('metodo_pago_id');
-  const metodoPago = mockMetodosPago.find(m => m.id === metodoPagoId);
+  const metodoPago = metodosPago.find(m => m.id === metodoPagoId);
+
+  // Cargar métodos de pago
+  useEffect(() => {
+    api.getMetodosPago()
+      .then(metodos => {
+        setMetodosPago(metodos.filter(m => m.activo));
+        setLoadingMetodos(false);
+      })
+      .catch(err => {
+        console.error('Error al cargar métodos de pago:', err);
+        toast.error('Error al cargar métodos de pago');
+        setLoadingMetodos(false);
+      });
+  }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: { 'image/*': [], 'application/pdf': [] },
@@ -52,27 +79,32 @@ export default function Checkout() {
         cuenta_id: item.tipo === 'cuenta_ff' ? item.id : null,
         paquete_id: item.tipo === 'paquete_diamantes' ? item.id : null,
         metodo_pago_id: data.metodo_pago_id,
-        nombre_cliente: data.nombre_cliente,
+        nombre_cliente: data.nombre_cliente || null,
         whatsapp_cliente: data.whatsapp_cliente,
       };
       const ord = await api.createOrder(orderData);
       setOrden(ord);
       setStep(1);
     } catch (e) {
-      toast.error('Error al crear la orden');
+      toast.error(e.message || 'Error al crear la orden');
     }
   });
 
   const submitComprobante = async () => {
     if (!comprobante) return toast.error('Adjunta el comprobante');
     setUploading(true);
-    await new Promise(r => setTimeout(r, 1500)); // simulate upload
-    setUploading(false);
-    clearCart();
-    setStep(3);
-    toast.success('¡Comprobante recibido! El vendedor lo revisará pronto.', {
-      style: { background: '#001a00', border: '1px solid rgba(0,255,0,0.3)', color: '#fff' },
-    });
+    try {
+      await api.uploadComprobante(orden.id, comprobante);
+      clearCart();
+      setStep(3);
+      toast.success('¡Comprobante recibido! El vendedor lo revisará pronto.', {
+        style: { background: '#001a00', border: '1px solid rgba(0,255,0,0.3)', color: '#fff' },
+      });
+    } catch (error) {
+      toast.error('Error al subir el comprobante');
+    } finally {
+      setUploading(false);
+    }
   };
 
   if (items.length === 0 && step < 3) {
@@ -85,201 +117,227 @@ export default function Checkout() {
   }
 
   return (
-    <div className="min-h-screen bg-black pt-24 pb-20">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6">
+    <div className="min-h-screen bg-black pt-24 pb-20 flex justify-center">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6" style={{ marginTop: '90px', marginBottom: '30px' }}>
 
         {/* Header */}
-        <div className="mb-8">
-          <Link to="/tienda" className="inline-flex items-center gap-2 text-white/40 hover:text-white transition-colors text-sm font-mono uppercase tracking-wider mb-4">
-            <ArrowLeft className="w-3.5 h-3.5" /> Volver
+        <div style={{ marginBottom: '40px' }}>
+          <Link to="/tienda" className="inline-flex items-center gap-2 text-white/40 hover:text-white transition-colors text-sm font-mono uppercase tracking-widest mb-4">
+            <ArrowLeft className="w-4 h-4" /> Volver a la tienda
           </Link>
-          <h1 className="font-display text-4xl text-white">CHECKOUT</h1>
+          <h1 className="font-display text-5xl text-white tracking-tighter">CHECKOUT</h1>
         </div>
 
-        {/* Steps indicator */}
-        <div className="flex items-center gap-0 mb-10">
-          {STEPS.map((s, i) => (
-            <div key={s} className="flex items-center flex-1">
-              <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 font-mono text-xs transition-all duration-300 flex-shrink-0
-                ${i < step ? 'bg-red-600 border-red-600 text-white' :
-                  i === step ? 'border-red-500 text-red-400' :
-                  'border-white/20 text-white/20'}`}
-              >
-                {i < step ? '✓' : i + 1}
-              </div>
-              <p className={`hidden sm:block ml-2 font-mono text-xs uppercase tracking-wider mr-2 transition-colors ${i <= step ? 'text-white/60' : 'text-white/20'}`}>
-                {s}
-              </p>
-              {i < STEPS.length - 1 && (
-                <div className={`flex-1 h-px transition-all duration-300 ${i < step ? 'bg-red-600' : 'bg-white/10'}`} />
-              )}
-            </div>
-          ))}
+        {/* Pasos */}
+        <div className="w-full" style={{ marginBottom: '48px' }}>
+  <div 
+    className="flex items-center justify-between mx-auto" 
+    style={{ 
+      maxWidth: '100%', // Se ajusta al ancho del contenedor padre (max-w-4xl)
+      padding: '0 10px' 
+    }}
+  >
+    {STEPS.map((s, i) => (
+      <div 
+        key={s} 
+        className="flex items-center" 
+        style={{ 
+          flex: i === STEPS.length - 1 ? '0 0 auto' : '1 1 0%',
+          justifyContent: i === STEPS.length - 1 ? 'flex-end' : 'flex-start'
+        }}
+      >
+        
+        {/* Indicador (Círculo + Texto) */}
+        <div className="flex flex-col md:flex-row items-center gap-2 md:gap-3 flex-shrink-0">
+          <div className={`flex items-center justify-center w-9 h-9 rounded-full border-2 font-mono text-xs transition-all duration-300
+            ${i < step ? 'bg-red-600 border-red-600 text-white' :
+              i === step ? 'border-red-500 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.3)]' :
+              'border-white/10 text-white/20'}`}
+          >
+            {i < step ? '✓' : i + 1}
+          </div>
+          <p className={`hidden md:block font-mono text-[10px] uppercase tracking-[0.2em] transition-colors ${i <= step ? 'text-white/70' : 'text-white/20'}`}>
+            {s}
+          </p>
+        </div>
+
+        {/* Línea Conectora */}
+        {i < STEPS.length - 1 && (
+          <div className="flex-1 mx-4" style={{ minWidth: '20px' }}>
+            <div className={`h-[1px] w-full transition-all duration-300 ${i < step ? 'bg-red-600' : 'bg-white/10'}`} />
+          </div>
+        )}
+        
+      </div>
+    ))}
+  </div>
         </div>
 
         <AnimatePresence mode="wait">
-
-          {/* Step 0: Datos */}
           {step === 0 && (
-            <motion.div key="step0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <motion.div key="step0" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
 
-                {/* Form */}
-                <GlassCard className="p-6">
-                  <h2 className="font-display text-xl tracking-widest mb-5">TUS DATOS</h2>
-                  <form onSubmit={onSubmitDatos} className="flex flex-col gap-4">
-                    <Input label="Tu nombre" placeholder="Carlos Mendez" error={errors.nombre_cliente?.message} {...register('nombre_cliente')} />
-                    <Input label="WhatsApp (con código país)" placeholder="573001234567" error={errors.whatsapp_cliente?.message} {...register('whatsapp_cliente')} />
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-sm font-semibold text-white/70 uppercase tracking-wider font-mono">Método de pago</label>
-                      <div className="grid grid-cols-1 gap-2">
-                        {mockMetodosPago.filter(m => m.activo).map(m => (
-                          <label key={m.id} className="flex items-center gap-3 p-3 bg-black/40 border border-white/10 rounded cursor-pointer hover:border-red-500/50 transition-all has-[:checked]:border-red-500 has-[:checked]:bg-red-900/20">
-                            <input type="radio" value={m.id} {...register('metodo_pago_id')} className="accent-red-600" />
-                            <span className="text-lg">{m.icon}</span>
-                            <div>
-                              <p className="font-body font-semibold text-white text-sm">{m.nombre}</p>
-                              <p className="text-white/40 font-mono text-xs">{m.datos_cuenta}</p>
+                {/* Formulario de Datos */}
+                <GlassCard className="lg:col-span-3 overflow-hidden">
+                  <div style={{ padding: '32px' }}>
+                    <h2 className="font-display text-2xl tracking-widest mb-8 text-white">TUS DATOS</h2>
+                    <form onSubmit={onSubmitDatos} className="flex flex-col gap-6">
+                      <Input label="Tu nombre (opcional)" placeholder="Ej: Carlos Mendez" error={errors.nombre_cliente?.message} {...register('nombre_cliente')} />
+                      <Input label="WhatsApp (con código país)" placeholder="Ej: 573001234567" error={errors.whatsapp_cliente?.message} {...register('whatsapp_cliente')} />
+                      
+                      <div className="flex flex-col gap-3">
+                        <label className="text-[11px] font-bold text-white/40 uppercase tracking-[0.2em] font-mono">Método de pago</label>
+                        {loadingMetodos ? (
+                          <div className="flex items-center justify-center py-10"><Spinner /></div>
+                        ) : (
+                          <div className="grid grid-cols-1 gap-3">
+                            {metodosPago.map(m => (
+                              <label key={m.id} className="flex items-center gap-4 p-4 bg-white/[0.02] border border-white/5 rounded-xl cursor-pointer hover:border-red-500/30 transition-all has-[:checked]:border-red-500 has-[:checked]:bg-red-500/[0.05]">
+                                <input type="radio" value={m.id} {...register('metodo_pago_id')} className="accent-red-600 w-4 h-4" />
+                                <span className="text-2xl">{getMetodoIcon(m.nombre)}</span>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-body font-bold text-white text-sm uppercase tracking-wide">{m.nombre}</p>
+                                  <p className="text-white/40 font-mono text-[11px] truncate mt-0.5">{m.datos_cuenta}</p>
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                        {errors.metodo_pago_id && <span className="text-xs text-red-500 font-mono mt-1">{errors.metodo_pago_id.message}</span>}
+                      </div>
+
+                      <Button type="submit" variant="primary" size="lg" className="w-full !py-5 mt-4" disabled={loadingMetodos || metodosPago.length === 0}>
+                        <span className="font-display tracking-[0.2em]">CONTINUAR A PAGAR</span> <Zap className="w-5 h-5 fill-current" />
+                      </Button>
+                    </form>
+                  </div>
+                </GlassCard>
+
+                {/* Resumen de Compra */}
+                <div className="lg:col-span-2 flex flex-col gap-4">
+                  <GlassCard>
+                    <div style={{ padding: '24px' }}>
+                      <h2 className="font-display text-lg tracking-widest mb-6 text-white/60">RESUMEN</h2>
+                      <div className="space-y-4 mb-6">
+                        {items.map(item => (
+                          <div key={item.id} className="flex gap-4 items-center">
+                            <div className="relative flex-shrink-0">
+                              <img src={item.imagenes?.[0]?.imagen_url || 'https://placehold.co/100x100/111/333?text=FF'} alt="" className="w-16 h-16 object-cover rounded-lg border border-white/10" />
                             </div>
-                          </label>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-white font-body font-bold text-sm truncate uppercase tracking-tight">{item.nombre}</p>
+                              <p className="text-red-500 font-display text-lg mt-0.5">{formatCOP(item.precio)}</p>
+                            </div>
+                          </div>
                         ))}
                       </div>
-                      {errors.metodo_pago_id && <span className="text-xs text-red-400 font-mono">{errors.metodo_pago_id.message}</span>}
-                    </div>
-                    <Button type="submit" variant="primary" size="lg" className="mt-2">
-                      Continuar <Zap className="w-4 h-4" />
-                    </Button>
-                  </form>
-                </GlassCard>
-
-                {/* Order summary */}
-                <GlassCard className="p-6 h-fit">
-                  <h2 className="font-display text-xl tracking-widest mb-4">RESUMEN</h2>
-                  <div className="space-y-3 mb-4">
-                    {items.map(item => (
-                      <div key={item.id} className="flex gap-3">
-                        <img src={item.imagenes?.[0]?.imagen_url} alt="" className="w-14 h-14 object-cover rounded bg-black/40 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-white font-body font-semibold text-sm truncate">{item.nombre}</p>
-                          <p className="text-red-400 font-display text-base">{formatCOP(item.precio)}</p>
-                        </div>
+                      <div className="border-t border-white/10 pt-5 flex justify-between items-end">
+                        <span className="text-white/40 font-mono text-[10px] uppercase tracking-widest pb-1">Total a pagar</span>
+                        <span className="font-display text-3xl text-white tracking-tighter">{formatCOP(total)}</span>
                       </div>
-                    ))}
+                    </div>
+                  </GlassCard>
+                  
+                  <div className="p-4 rounded-xl bg-yellow-500/5 border border-yellow-500/10">
+                    <p className="text-[10px] text-yellow-500/70 font-mono leading-relaxed uppercase tracking-wider">
+                      ⚠️ Asegúrate de enviar el monto exacto para evitar retrasos en la entrega de tu cuenta o diamantes.
+                    </p>
                   </div>
-                  <div className="border-t border-white/10 pt-3 flex justify-between">
-                    <span className="text-white/60 font-body font-semibold">Total</span>
-                    <span className="font-display text-2xl text-white">{formatCOP(total)}</span>
-                  </div>
-                </GlassCard>
+                </div>
+
               </div>
             </motion.div>
           )}
 
-          {/* Step 1: Instrucciones de pago */}
+          {/* Los demás steps siguen el mismo patrón de GlassCard con padding manual... */}
           {step === 1 && metodoPago && (
-            <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-              <GlassCard className="p-8 text-center">
-                <div className="text-5xl mb-4">{metodoPago.icon}</div>
-                <h2 className="font-display text-3xl mb-2">REALIZA EL PAGO</h2>
-                <p className="text-white/50 font-body mb-6">Transfiere exactamente el monto indicado a esta cuenta:</p>
+            <motion.div key="step1" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
+              <GlassCard className="max-w-xl mx-auto overflow-hidden">
+                <div style={{ padding: '40px' }} className="text-center">
+                  <div className="text-6xl mb-6">{getMetodoIcon(metodoPago.nombre)}</div>
+                  <h2 className="font-display text-3xl mb-3 text-white">REALIZA TU PAGO</h2>
+                  <p className="text-white/40 font-body text-sm mb-8">Transfiere el monto exacto a los siguientes datos:</p>
 
-                <div className="bg-black/60 border border-white/10 rounded-xl p-6 mb-4 text-left">
-                  <div className="flex flex-col gap-3">
+                  <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-8 mb-8 text-left space-y-6">
                     <div>
-                      <p className="text-white/40 font-mono text-xs uppercase tracking-wider">Método</p>
-                      <p className="font-display text-2xl text-white mt-0.5">{metodoPago.nombre}</p>
+                      <p className="text-white/30 font-mono text-[10px] uppercase tracking-[0.2em]">Banco / Plataforma</p>
+                      <p className="font-display text-2xl text-white mt-1 uppercase">{metodoPago.nombre}</p>
                     </div>
                     <div>
-                      <p className="text-white/40 font-mono text-xs uppercase tracking-wider">Cuenta / Número</p>
-                      <p className="font-mono text-xl text-red-400 mt-0.5">{metodoPago.datos_cuenta}</p>
+                      <p className="text-white/30 font-mono text-[10px] uppercase tracking-[0.2em]">Número de Cuenta</p>
+                      <p className="font-mono text-2xl text-red-500 mt-1 break-all tracking-tight font-bold">{metodoPago.datos_cuenta}</p>
                     </div>
                     <div>
-                      <p className="text-white/40 font-mono text-xs uppercase tracking-wider">Monto exacto</p>
-                      <p className="font-display text-4xl text-white mt-0.5">{formatCOP(total)}</p>
+                      <p className="text-white/30 font-mono text-[10px] uppercase tracking-[0.2em]">Valor Total</p>
+                      <p className="font-display text-4xl text-white mt-1 tracking-tighter">{formatCOP(total)}</p>
                     </div>
-                    {metodoPago.instrucciones && (
-                      <div className="bg-white/5 rounded-lg p-3 border border-white/10">
-                        <p className="text-white/60 font-body text-sm">{metodoPago.instrucciones}</p>
+                  </div>
+
+                  <Button variant="primary" size="lg" className="w-full !py-5" onClick={() => setStep(2)}>
+                    <span className="font-display tracking-widest">YA REALICÉ EL PAGO</span> <Zap className="w-5 h-5" />
+                  </Button>
+                </div>
+              </GlassCard>
+            </motion.div>
+          )}
+
+          {step === 2 && (
+            <motion.div key="step2" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+              <GlassCard className="max-w-xl mx-auto">
+                <div style={{ padding: '40px' }}>
+                  <h2 className="font-display text-2xl tracking-widest mb-2 text-white">SUBIR COMPROBANTE</h2>
+                  <p className="text-white/40 font-body text-sm mb-8">Adjunta una captura de pantalla legible de la transferencia.</p>
+
+                  <div
+                    {...getRootProps()}
+                    className={`border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-all
+                      ${isDragActive ? 'border-red-500 bg-red-500/10' : comprobante ? 'border-green-500 bg-green-500/5' : 'border-white/10 hover:border-white/20 hover:bg-white/[0.02]'}`}
+                  >
+                    <input {...getInputProps()} />
+                    {comprobante ? (
+                      <div className="flex flex-col items-center gap-4">
+                        <CheckCircle className="w-12 h-12 text-green-500" />
+                        <p className="font-body font-bold text-green-500 text-sm">{comprobante.name}</p>
+                        <button onClick={(e) => { e.stopPropagation(); setComprobante(null); }} className="text-[10px] font-mono uppercase tracking-widest text-white/40 hover:text-red-500">
+                          Eliminar y cambiar
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-4">
+                        <Upload className="w-12 h-12 text-white/10" />
+                        <p className="font-body text-white/50 text-sm">Arrastra tu comprobante aquí</p>
+                        <p className="text-[10px] text-white/20 font-mono uppercase">PNG, JPG o PDF hasta 10MB</p>
                       </div>
                     )}
                   </div>
-                </div>
 
-                <p className="text-white/40 font-mono text-xs mb-6">
-                  ID de orden: <span className="text-white/60">{orden?.id}</span>
-                </p>
-
-                <Button variant="primary" size="lg" onClick={() => setStep(2)}>
-                  Ya realicé el pago <Zap className="w-4 h-4" />
-                </Button>
-              </GlassCard>
-            </motion.div>
-          )}
-
-          {/* Step 2: Subir comprobante */}
-          {step === 2 && (
-            <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-              <GlassCard className="p-8">
-                <h2 className="font-display text-2xl tracking-widest mb-2">SUBE TU COMPROBANTE</h2>
-                <p className="text-white/50 font-body text-sm mb-6">Adjunta la captura o PDF de tu transferencia para verificar el pago.</p>
-
-                <div
-                  {...getRootProps()}
-                  className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all duration-200
-                    ${isDragActive ? 'border-red-500 bg-red-900/10' : comprobante ? 'border-green-500/50 bg-green-900/10' : 'border-white/20 hover:border-red-500/50 hover:bg-red-900/5'}`}
-                >
-                  <input {...getInputProps()} />
-                  {comprobante ? (
-                    <div className="flex flex-col items-center gap-3">
-                      <CheckCircle className="w-10 h-10 text-green-400" />
-                      <p className="font-body font-semibold text-green-400">{comprobante.name}</p>
-                      <p className="text-white/40 font-mono text-xs">{(comprobante.size / 1024).toFixed(0)} KB</p>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setComprobante(null); }}
-                        className="flex items-center gap-1 text-white/40 hover:text-red-400 text-xs font-mono"
-                      >
-                        <X className="w-3 h-3" /> Cambiar archivo
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-3">
-                      <Upload className="w-10 h-10 text-white/20" />
-                      <p className="font-body text-white/50">{isDragActive ? 'Suelta aquí...' : 'Arrastra o toca para subir'}</p>
-                      <p className="text-white/30 font-mono text-xs">JPG, PNG o PDF — máx 10MB</p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex gap-3 mt-6">
-                  <Button variant="ghost" onClick={() => setStep(1)}>
-                    <ArrowLeft className="w-4 h-4" /> Atrás
-                  </Button>
-                  <Button variant="primary" size="lg" className="flex-1" onClick={submitComprobante} loading={uploading} disabled={!comprobante}>
-                    Enviar comprobante
-                  </Button>
+                  <div className="flex gap-4 mt-8">
+                    <Button variant="ghost" onClick={() => setStep(1)} className="flex-1">Atrás</Button>
+                    <Button variant="primary" size="lg" className="flex-[2] !py-5" onClick={submitComprobante} loading={uploading} disabled={!comprobante}>
+                      ENVIAR AHORA
+                    </Button>
+                  </div>
                 </div>
               </GlassCard>
             </motion.div>
           )}
 
-          {/* Step 3: Éxito */}
           {step === 3 && (
             <motion.div key="step3" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-              <GlassCard className="p-10 text-center">
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: 'spring', delay: 0.2 }}
-                  className="w-20 h-20 bg-green-900/30 border-2 border-green-500/50 rounded-full flex items-center justify-center mx-auto mb-6"
-                >
-                  <CheckCircle className="w-10 h-10 text-green-400" />
-                </motion.div>
-                <h2 className="font-display text-4xl mb-3">¡COMPROBANTE<br />RECIBIDO!</h2>
-                <p className="text-white/60 font-body mb-2">El vendedor verificará tu pago y se comunicará contigo por WhatsApp.</p>
-                <p className="text-white/30 font-mono text-xs mb-8">⚡ Entrega en menos de 24 horas</p>
-                <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                  <Link to="/tienda"><Button variant="outline">Seguir comprando</Button></Link>
-                  <Link to="/"><Button variant="ghost">Volver al inicio</Button></Link>
+              <GlassCard className="max-w-lg mx-auto overflow-hidden">
+                <div style={{ padding: '60px 40px' }} className="text-center">
+                  <div className="w-24 h-24 bg-green-500/10 border border-green-500/20 rounded-full flex items-center justify-center mx-auto mb-8">
+                    <CheckCircle className="w-12 h-12 text-green-500" />
+                  </div>
+                  <h2 className="font-display text-4xl mb-4 text-white uppercase tracking-tighter">¡LISTO!</h2>
+                  <p className="text-white/50 font-body mb-8 text-sm leading-relaxed">
+                    Hemos recibido tu comprobante. El equipo verificará la transacción y te contactará por WhatsApp en breve.
+                  </p>
+                  <div className="flex flex-col gap-3">
+                    <Link to="/tienda"><Button variant="primary" className="w-full py-4!">SEGUIR COMPRANDO</Button></Link>
+                    <Link to="/"><Button variant="ghost" className="w-full">VOLVER AL INICIO</Button></Link>
+                  </div>
                 </div>
               </GlassCard>
             </motion.div>

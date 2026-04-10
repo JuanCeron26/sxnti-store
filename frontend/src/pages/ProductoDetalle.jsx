@@ -2,24 +2,42 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, ShoppingCart, Zap, Shield, Clock, ChevronRight } from 'lucide-react';
+import { ShoppingCart, Zap, Shield, Clock, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
-import { api, mockMetodosPago } from '../services/api';
+import { api } from '../services/api';
 import { useCart, formatCOP } from '../utils/context';
 import { Button, Badge, GlassCard, Spinner } from '../components/ui';
+
+// Helper para iconos de métodos de pago
+const getMetodoIcon = (nombre) => {
+  const lower = nombre.toLowerCase();
+  if (lower.includes('nequi')) return '📱';
+  if (lower.includes('banco')) return '🏦';
+  if (lower.includes('western')) return '💸';
+  if (lower.includes('zelle')) return '💳';
+  if (lower.includes('paypal')) return '💰';
+  return '💳';
+};
 
 export default function ProductoDetalle() {
   const { id } = useParams();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [imgIdx, setImgIdx] = useState(0);
+  const [metodosPago, setMetodosPago] = useState([]);
   const { addItem } = useCart();
 
   useEffect(() => {
+    // Cargar producto
     api.getProduct(id).then(p => {
       setProduct(p);
       setLoading(false);
     });
+
+    // Cargar métodos de pago
+    api.getMetodosPago()
+      .then(metodos => setMetodosPago(metodos.filter(m => m.activo)))
+      .catch(err => console.error('Error al cargar métodos de pago:', err));
   }, [id]);
 
   if (loading) return (
@@ -48,11 +66,11 @@ export default function ProductoDetalle() {
   };
 
   return (
-    <div className="min-h-screen bg-black pt-24 pb-20">
+    <div className="min-h-screen bg-black pt-24 pb-20" style={{ paddingTop: '90px'}}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
 
         {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-white/40 font-mono text-xs uppercase tracking-wider mb-8">
+        <div className="flex items-center gap-2 text-white/40 font-mono text-xs uppercase tracking-wider mb-8" style={{marginBottom: '10px'}}>
           <Link to="/" className="hover:text-white transition-colors">Inicio</Link>
           <ChevronRight className="w-3 h-3" />
           <Link to="/tienda" className="hover:text-white transition-colors">Tienda</Link>
@@ -176,11 +194,15 @@ export default function ProductoDetalle() {
             <GlassCard className="p-4">
               <p className="text-white/50 font-mono text-xs uppercase tracking-wider mb-3">Métodos de pago aceptados</p>
               <div className="flex flex-wrap gap-2">
-                {mockMetodosPago.filter(m => m.activo).map(m => (
-                  <span key={m.id} className="flex items-center gap-1 px-3 py-1 bg-white/5 border border-white/10 rounded text-xs font-mono text-white/50 uppercase">
-                    {m.icon} {m.nombre}
-                  </span>
-                ))}
+                {metodosPago.length === 0 ? (
+                  <p className="text-white/30 text-xs">Cargando métodos de pago...</p>
+                ) : (
+                  metodosPago.map(m => (
+                    <span key={m.id} className="flex items-center gap-1 px-3 py-1 bg-white/5 border border-white/10 rounded text-xs font-mono text-white/50 uppercase">
+                      {getMetodoIcon(m.nombre)} {m.nombre}
+                    </span>
+                  ))
+                )}
               </div>
             </GlassCard>
           </motion.div>
