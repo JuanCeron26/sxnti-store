@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1 import cuentas_ff, paquetes_diamantes, metodos_pago, compras, comprobantes, auth
+from app.api.v1 import cuentas_ff, paquetes_diamantes, metodos_pago, compras, comprobantes, auth, medios
 
 router = APIRouter()
 
@@ -9,3 +9,4 @@ router.include_router(metodos_pago.router)
 router.include_router(compras.router)
 router.include_router(comprobantes.router)
 router.include_router(auth.router)
+router.include_router(medios.router)

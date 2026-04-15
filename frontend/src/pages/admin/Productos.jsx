@@ -24,13 +24,26 @@ const schema = z.object({
   cantidad_diamantes: z.coerce.number().optional(),
 });
 
-function ImageDropzone({ onFile, file }) {
+function MediaDropzone({ onFile, file }) {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    accept: { 'image/*': [] },
-    maxSize: 5 * 1024 * 1024,
+    accept: { 
+      'image/*': ['.jpg', '.jpeg', '.png', '.webp'],
+      'video/*': ['.mp4', '.webm', '.mov']
+    },
+    maxSize: 50 * 1024 * 1024, // 50MB para videos
     onDrop: (files) => files[0] && onFile(files[0]),
-    onDropRejected: () => toast.error('Imagen inválida. Máx 5MB.'),
+    onDropRejected: (rejections) => {
+      const error = rejections[0]?.errors[0];
+      if (error?.code === 'file-too-large') {
+        toast.error('Archivo muy grande. Máx 50MB para videos, 10MB para imágenes.');
+      } else {
+        toast.error('Archivo inválido. Usa JPG, PNG, WEBP, MP4, WEBM o MOV.');
+      }
+    },
   });
+
+  const isVideo = file && file.type.startsWith('video/');
+  const isImage = file && file.type.startsWith('image/');
 
   return (
     <div
@@ -45,12 +58,20 @@ function ImageDropzone({ onFile, file }) {
         <div className="flex flex-col items-center gap-2">
           <CheckCircle className="w-7 h-7 text-green-400" />
           <p className="text-green-400 font-mono text-sm">{file.name}</p>
+          <p className="text-white/40 text-xs">
+            {isVideo ? '🎥 Video' : isImage ? '🖼️ Imagen' : 'Archivo'} • {(file.size / 1024 / 1024).toFixed(1)}MB
+          </p>
         </div>
       ) : (
         <div className="flex flex-col items-center gap-2">
           <Upload className="w-7 h-7 text-white/20" />
-          <p className="text-white/40 font-body text-sm">{isDragActive ? 'Suelta aquí' : 'Sube la imagen del producto'}</p>
-          <p className="text-white/20 font-mono text-xs">JPG, PNG — máx 5MB</p>
+          <p className="text-white/40 font-body text-sm">
+            {isDragActive ? 'Suelta aquí' : 'Sube imagen o video del producto'}
+          </p>
+          <p className="text-white/20 font-mono text-xs">
+            Imágenes: JPG, PNG, WEBP (máx 10MB)<br />
+            Videos: MP4, WEBM, MOV (máx 50MB, ~2 min)
+          </p>
         </div>
       )}
     </div>
@@ -59,7 +80,8 @@ function ImageDropzone({ onFile, file }) {
 
 function ProductModal({ product, onClose, onSave }) {
   const isEdit = !!product;
-  const [imgFile, setImgFile] = useState(null);
+  const [mediaFile, setMediaFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
@@ -68,10 +90,38 @@ function ProductModal({ product, onClose, onSave }) {
 
   const tipo = watch('tipo');
 
-  const onSubmit = handleSubmit((data) => {
-    onSave({ ...data, id: product?.id || String(Date.now()), imagenes: product?.imagenes || [] });
-    toast.success(isEdit ? 'Producto actualizado' : 'Producto creado');
-    onClose();
+  const onSubmit = handleSubmit(async (data) => {
+    try {
+      setUploading(true);
+      
+      // 1. Crear el producto en el backend
+      let productoId;
+      if (tipo === 'cuenta_ff') {
+        const result = await api.createCuentaFF(data);
+        productoId = result.id;
+      } else {
+        const result = await api.createPaquete(data);
+        productoId = result.id;
+      }
+
+      // 2. Si hay archivo, subirlo
+      if (mediaFile) {
+        if (tipo === 'cuenta_ff') {
+          await api.uploadMedioCuenta(productoId, mediaFile, true);
+        } else {
+          await api.uploadMedioPaquete(productoId, mediaFile);
+        }
+      }
+
+      toast.success(isEdit ? 'Producto actualizado' : 'Producto creado exitosamente');
+      onSave(); // Recargar la lista
+      onClose();
+    } catch (error) {
+      console.error('Error al guardar producto:', error);
+      toast.error(error.message || 'Error al guardar el producto');
+    } finally {
+      setUploading(false);
+    }
   });
 
   return (
@@ -119,12 +169,14 @@ function ProductModal({ product, onClose, onSave }) {
             <Input label="Cantidad de diamantes" type="number" placeholder="310" error={errors.cantidad_diamantes?.message} {...register('cantidad_diamantes')} />
           )}
 
-          <ImageDropzone onFile={setImgFile} file={imgFile} />
+          <MediaDropzone onFile={setMediaFile} file={mediaFile} />
 
           <div className="flex gap-3 pt-2">
-            <Button type="button" variant="ghost" onClick={onClose} className="flex-1">Cancelar</Button>
-            <Button type="submit" variant="primary" size="lg" className="flex-1">
-              {isEdit ? 'Guardar cambios' : 'Crear producto'}
+            <Button type="button" variant="ghost" onClick={onClose} className="flex-1" disabled={uploading}>
+              Cancelar
+            </Button>
+            <Button type="submit" variant="primary" size="lg" className="flex-1" loading={uploading} disabled={uploading}>
+              {uploading ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Crear producto'}
             </Button>
           </div>
         </form>
@@ -156,13 +208,9 @@ export default function AdminProductos() {
     }
   };
 
-  const handleSave = (data) => {
-    // Por ahora solo actualiza localmente
-    // TODO: Implementar llamada al backend cuando esté listo
-    setProducts(prev => {
-      const exists = prev.find(p => p.id === data.id);
-      return exists ? prev.map(p => p.id === data.id ? { ...p, ...data } : p) : [data, ...prev];
-    });
+  const handleSave = async () => {
+    // Recargar la lista de productos
+    await loadProducts();
   };
 
   const handleDelete = (id) => {
@@ -184,7 +232,7 @@ export default function AdminProductos() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6" style={{ paddingLeft: '10px', marginTop: '10px'}}>
       <div className="flex items-center justify-between mb-6">
         <div>
           <p className="text-white/40 font-mono text-xs uppercase tracking-wider mb-1">Admin</p>

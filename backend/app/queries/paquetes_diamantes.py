@@ -40,3 +40,14 @@ MARCAR_PIN_USADO = """
     SET usado = 1, usado_en = NOW()
     WHERE id = :id
 """
+
+UPDATE_IMAGEN_PAQUETE = """
+    UPDATE paquetes_diamantes
+    SET imagen_url = :imagen_url
+    WHERE id = :id
+"""
+
+
+DELETE_PAQUETE = """
+    DELETE FROM paquetes_diamantes WHERE id = :id
+"""

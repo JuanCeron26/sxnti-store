@@ -32,8 +32,24 @@ UPDATE_PIN_ENTREGADO = """
 GET_ORDENES_RECIENTES = """
     SELECT
         o.id, o.tipo, o.nombre_cliente,
-        o.whatsapp_cliente, o.url_comprobante, o.creado_en
+        o.whatsapp_cliente, o.url_comprobante, o.creado_en,
+        o.metodo_pago_id,
+        
+        -- datos de cuenta FF (si aplica)
+        c.nombre        AS cuenta_nombre,
+        c.precio        AS cuenta_precio,
+        
+        -- datos de paquete (si aplica)
+        p.nombre        AS paquete_nombre,
+        p.precio        AS paquete_precio,
+        
+        -- método de pago
+        m.nombre        AS metodo_pago_nombre
+        
     FROM ordenes o
+    LEFT JOIN cuentas_ff c           ON o.cuenta_id = c.id
+    LEFT JOIN paquetes_diamantes p   ON o.paquete_id = p.id
+    LEFT JOIN metodos_pago m         ON o.metodo_pago_id = m.id
     ORDER BY o.creado_en DESC
     LIMIT :limite
 """

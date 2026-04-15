@@ -147,7 +147,7 @@ export const api = {
   // ─── COMPROBANTES ────────────────────────────────────────────────────────
   uploadComprobante: async (ordenId, file) => {
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('archivo', file);  // El backend espera 'archivo', no 'file'
     
     const res = await fetch(`${API_BASE_URL}/comprobantes/${ordenId}`, {
       method: 'POST',
@@ -187,6 +187,30 @@ export const api = {
       method: 'POST',
       headers: getHeaders(token),
       body: JSON.stringify(data)
+    });
+    return handleResponse(res);
+  },
+
+  // ─── MEDIOS (IMÁGENES/VIDEOS) ────────────────────────────────────────────
+  uploadMedioCuenta: async (cuentaId, file, esPrincipal = false) => {
+    const formData = new FormData();
+    formData.append('archivo', file);
+    formData.append('es_principal', esPrincipal);
+    
+    const res = await fetch(`${API_BASE_URL}/medios/cuenta/${cuentaId}?es_principal=${esPrincipal}`, {
+      method: 'POST',
+      body: formData
+    });
+    return handleResponse(res);
+  },
+
+  uploadMedioPaquete: async (paqueteId, file) => {
+    const formData = new FormData();
+    formData.append('archivo', file);
+    
+    const res = await fetch(`${API_BASE_URL}/medios/paquete/${paqueteId}`, {
+      method: 'POST',
+      body: formData
     });
     return handleResponse(res);
   },

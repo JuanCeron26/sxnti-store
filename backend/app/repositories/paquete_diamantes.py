@@ -46,3 +46,11 @@ async def marcar_pin_usado(db: AsyncSession, pin_id: str) -> None:
         {"id": pin_id}
     )
     await db.commit()
+
+
+async def delete(db: AsyncSession, paquete_id: str) -> None:
+    await db.execute(
+        text(q.DELETE_PAQUETE),
+        {"id": paquete_id}
+    )
+    await db.commit()

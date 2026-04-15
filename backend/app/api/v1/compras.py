@@ -44,4 +44,32 @@ async def listar_ordenes_recientes(
     limite: int = 20,
     db: AsyncSession = Depends(get_db)
 ):
-    return await repo.get_recientes(db, limite)
+    ordenes = await repo.get_recientes(db, limite)
+    
+    # Convertir a lista de dicts y generar URLs firmadas para comprobantes
+    resultado = []
+    for orden in ordenes:
+        orden_dict = dict(orden)
+        
+        # Generar URL firmada para el comprobante si existe
+        if orden_dict.get("url_comprobante"):
+            try:
+                orden_dict["url_comprobante"] = generar_url_firmada(
+                    orden_dict["url_comprobante"],
+                    expira_en=86400  # 24 horas
+                )
+            except Exception:
+                # Si falla, dejar como None
+                orden_dict["url_comprobante"] = None
+        
+        # Determinar nombre y precio del producto según el tipo
+        if orden_dict["tipo"] == "cuenta":
+            orden_dict["producto_nombre"] = orden_dict.get("cuenta_nombre")
+            orden_dict["producto_precio"] = orden_dict.get("cuenta_precio")
+        else:  # paquete
+            orden_dict["producto_nombre"] = orden_dict.get("paquete_nombre")
+            orden_dict["producto_precio"] = orden_dict.get("paquete_precio")
+        
+        resultado.append(orden_dict)
+    
+    return resultado

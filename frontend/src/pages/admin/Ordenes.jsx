@@ -1,7 +1,7 @@
 // pages/admin/Ordenes.jsx
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle, XCircle, Eye, MessageSquare, Clock, Filter } from 'lucide-react';
+import { CheckCircle, XCircle, Eye, MessageSquare, Clock, Filter, FileText, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../services/api';
 import { formatCOP } from '../../utils/context';
@@ -32,8 +32,15 @@ export default function AdminOrdenes() {
 
   const filtered = filter === 'all' ? orders : orders.filter(o => o.estado === filter);
 
+  // Detectar si el comprobante es una imagen
+  const esImagen = (url) => {
+    if (!url) return false;
+    const ext = url.split('.').pop().split('?')[0].toLowerCase();
+    return ['jpg', 'jpeg', 'png', 'webp'].includes(ext);
+  };
+
   return (
-    <div className="p-6">
+    <div className="p-6" style={{ paddingLeft: '10px', marginTop: '10px'}}>
       <div className="flex items-center justify-between mb-6">
         <div>
           <p className="text-white/40 font-mono text-xs uppercase tracking-wider mb-1">Admin</p>
@@ -75,24 +82,38 @@ export default function AdminOrdenes() {
                     <span className="text-white/30 font-mono text-xs">{order.id}</span>
                   </div>
                   <p className="font-body font-bold text-white truncate">{order.nombre_cliente}</p>
-                  <p className="text-white/50 font-body text-sm truncate">{order.producto}</p>
+                  <p className="text-white/50 font-body text-sm truncate">{order.producto_nombre || 'Producto no disponible'}</p>
                 </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="font-display text-xl text-red-400">{formatCOP(order.precio)}</p>
-                  <p className="text-white/30 font-mono text-xs mt-0.5">{order.metodo_pago}</p>
+                <div className="text-right shrink-0">
+                  <p className="font-display text-xl text-red-400">
+                    {order.producto_precio ? formatCOP(order.producto_precio) : 'N/A'}
+                  </p>
+                  <p className="text-white/30 font-mono text-xs mt-0.5">{order.metodo_pago_nombre || 'N/A'}</p>
                 </div>
               </div>
 
-              {/* Comprobante preview */}
+              {/* Comprobante - mostrar imagen o link */}
               {order.url_comprobante && (
                 <div className="mb-3">
-                  <a href={order.url_comprobante} target="_blank" rel="noopener noreferrer">
-                    <img
-                      src={order.url_comprobante}
-                      alt="Comprobante"
-                      className="w-full h-24 object-cover rounded-lg border border-white/10 hover:border-red-500/50 transition-all cursor-pointer"
-                    />
-                  </a>
+                  {esImagen(order.url_comprobante) ? (
+                    <a href={order.url_comprobante} target="_blank" rel="noopener noreferrer">
+                      <img
+                        src={order.url_comprobante}
+                        alt="Comprobante"
+                        className="w-full h-24 object-cover rounded-lg border border-white/10 hover:border-red-500/50 transition-all cursor-pointer"
+                      />
+                    </a>
+                  ) : (
+                    <a
+                      href={order.url_comprobante}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 bg-blue-900/20 border border-blue-800/40 text-blue-400 hover:bg-blue-900/40 rounded-lg px-3 py-2 transition-all"
+                    >
+                      <FileText className="w-4 h-4" />
+                      <span className="font-mono text-xs">Ver comprobante</span>
+                    </a>
+                  )}
                 </div>
               )}
 

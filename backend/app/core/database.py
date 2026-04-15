@@ -17,3 +17,11 @@ SessionLocal = async_sessionmaker(
 async def get_db() -> AsyncSession:
     async with SessionLocal() as session:
         yield session
+
+
+def get_db_session():
+    """
+    Context manager para usar la base de datos fuera de FastAPI.
+    Uso: async with get_db_session() as db: ...
+    """
+    return SessionLocal()
